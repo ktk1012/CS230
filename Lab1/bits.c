@@ -196,7 +196,6 @@ int bitCount(int x) {
   int count = 0;
   mask = mask | (mask << 8);
   mask = mask | (mask << 16);
-  mask = mask | (mask << 24);
   count += (x & mask);
   count += ((x >> 1) & mask);
   count += ((x >> 2) & mask);
@@ -266,8 +265,12 @@ int addOK(int x, int y) {
  *   Rating: 3
  */
 int rempwr2(int x, int n) {
+  int divisor_mask = ~(~0 << n);
+  int is_divided = (!!(x & divisor_mask) << 0x1f) >> 0x1f;
 
-  return 2 ;
+  return (x & divisor_mask) + (((x >> 0x1f) & is_divided) & ((~(1 << n)) + 1));
+  //return ((!!(x & divisor)) << 0x1f) >> 0x1f;
+  //return ~(1 << n);
 }
 
 /* 
@@ -300,11 +303,26 @@ int isLess(int x, int y) {
  *   Rating: 4
  */
 int absVal(int x) {
-
-
-
-
-  return 2;
+  /*
+   * -Description of each terms
+   * (x >> 0x1f) : 0x00000000 if x is non-negative, 
+   * else 0xffffffff.
+   * x ^ (x >> 0x1f) : if x is non-negative, result of this term is x.
+   * Otherwise, x's bits are fliped.
+   * (x >> 0x1f) & 0x01 : if x is non-negative result is 0[0x00000000],
+   * else result is 1.
+   * - Description of functions
+   * It returns absolute value of x.
+   * If x is non-negative it returns x itself.
+   * Since most significant bit of non-negative value is 0 so (x >> 0x1f) is 0,
+   * So xor opertaions just return x, and and operation with MSB and 1 is 0 
+   * -> return value is just x.
+   * On the other hand, if x is negative it returns 2's complement of x,
+   * and it is equivalent to bitwise flip of x and plus 1.
+   * Sinxe x ^ (x >> 0x1f) is bitwise flop and (x >> 0x1f)& 0x01 is 1
+   * it returns 2's complement of x.
+   */
+  return (x ^ (x >> 0x1f)) + ((x >> 0x1f) & 0x01) ;
 
 }
 
@@ -317,8 +335,18 @@ int absVal(int x) {
  *   Rating: 4
  */
 int isPower2(int x) {
-
-  return 2;
+  /* 
+   * Description of each term
+   * !!x : determines x is zero or not (because isPower2(0) is 0
+   * !x & (x + (~1) + 1) : determine wheter x is power of 2 or not 
+   * regardless of its sign. This is work because if x is power of 2,
+   * it contains only one '1' so x-1 becomes all 1s except x's 1's location
+   * so only power of 2 becomes 0x00000000. (~1) + 1 means -1
+   * !(x >> 0x1f) : determine whether x is non-negative.
+   * so it returns and(&) operations of above three terms
+   * isPower2 is true only x is non-zero and power of 2 and non-negative 
+   */
+  return (!!x) & (!(x & (x + (~1) +1))) & (!(x >> 0x1f));
 
 }
 
