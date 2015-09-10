@@ -139,6 +139,12 @@ NOTES:
  *   Rating: 1
  */
 int bitNor(int x, int y) {
+  /*
+   * Nor operation is logically equivalent to
+   * (~x) & (~y). It derived easily from easy boolean algebra.
+   * ~(x|y) = (~x) & (~y) by De Morgan's Law
+   */
+  
   return (~x) & (~y);
 }
 
@@ -150,8 +156,15 @@ int bitNor(int x, int y) {
  *   Rating: 2
  */
 int copyLSB(int x) {
-  return (~(x&1))+1;
+  /*
+   * LSB is x&1. since x is binary code,
+   * x & 1 is 1 or 0, so bitwise negation of 
+   * x&1 becomes 0xffffffff if x & is 0,
+   * else 0xfffffffe. Finally add 1 becomes 
+   * desired result
+   */
 
+  return (~(x&1))+1;
 }
 
 /* 
@@ -162,9 +175,13 @@ int copyLSB(int x) {
  *   Rating: 2
  */
 int isEqual(int x, int y) {
+  /* 
+   * x^y is 0 if all bits are same.
+   * So not operation of x^y becomes 1 only 
+   * x and y are same
+   */
 
   return !(x^y);
-
 }
 
 /* 
@@ -178,10 +195,10 @@ int isEqual(int x, int y) {
  *   Rating: 3
  */
 int bitMask(int highbit, int lowbit) {
-  
+  /*
+   */ 
   
   return (~((~0 << highbit) << 1)) & (~0 << lowbit);
-
 }
 
 /*
@@ -192,6 +209,8 @@ int bitMask(int highbit, int lowbit) {
  *   Rating: 4
  */
 int bitCount(int x) {
+  /*
+   */
   int mask = 0x01;
   int count = 0;
   mask = mask | (mask << 8);
@@ -206,7 +225,6 @@ int bitCount(int x) {
   count += ((x >> 7) & mask);
 
   return (count & 0xff) + ((count >> 8) & 0xff) + ((count >> 16) & 0xff) + ((count >> 24) & 0xff);
-
 }
 
 /* 
@@ -216,11 +234,16 @@ int bitCount(int x) {
  *   Rating: 1
  */
 int tmax(void) {
-
-
+  /* 
+   * Maximum number of 2's complement integer is 
+   * equal to maximum positive number.
+   * So except most significant bit, all bits should be 1.
+   * And it is equivalent to negation of (0x80000000).
+   * 1 << 0x1f becomes 0x80000000, and than negation becomes
+   * maximum number
+   */ 
 
   return ~(1 << 0x1f);
-
 }
 
 /* 
@@ -231,11 +254,16 @@ int tmax(void) {
  *   Rating: 3
  */
 int isNonNegative(int x) {
-
-
+  /* 
+   * In 2's complement, negative number's
+   * most significant bit is 1, and 0 for non-negative integers
+   * So we just check for MSB for x is enough
+   * if we shift 31bits, result becomes 0 if x is non negative,
+   * 0xffffffff for negative integers. 
+   * Finally negation of shifted reult is what we disired
+   */
 
   return !(x >> 0x1f);
-
 }
 
 /* 
@@ -247,13 +275,22 @@ int isNonNegative(int x) {
  *   Rating: 3
  */
 int addOK(int x, int y) {
-
+  /* 
+   * Overflow occures when adding two positive numbers
+   * become negative number and similarily adding two
+   * negative numbers become positive number. So we can check 
+   * over flow via most significant bit of two oprands.
+   * In digital logic overflows is detected by follwing equations
+   * (!MSB_x & !MSB_y & MSB_xy) | (MSB_x & MSB_Y & !MSB_xy)
+   *  - Overflow is occur when the MSB of result is different from two oprands,
+   *  and we do not concern about different sign.
+   * So negation of above result is disired value
+   */
   int MSB_x = !(x >> 0x1f);
   int MSB_y = !(y >> 0x1f);
   int MSB_xy = !((x + y) >> 0x1f);
 
-  return (!MSB_x | !MSB_y | MSB_xy) & (MSB_x | MSB_y | !MSB_xy);
-
+  return !((!MSB_x & !MSB_y & MSB_xy) | (MSB_x & MSB_y & !MSB_xy));
 }
 
 /* 
@@ -265,12 +302,24 @@ int addOK(int x, int y) {
  *   Rating: 3
  */
 int rempwr2(int x, int n) {
+  /*
+   * divisor mask is 2^n -1. So and operation is positive remainder.
+   * When x is negative we subtract 2^n for desired value.
+   * x >> 0x1f is 0 if x is non-negative, 1 else. 
+   * But if x is divided by 2^n, we do not subtract 2^n, 
+   * so we need additional variable is_divided;
+   *  if x is divided it result 0(divided), else 0xffffffff(not divided).
+   * We can subtract 2^n if x is negative and x is not_divided.
+   * So (x >> 0x1f) & is_divided gives whether subtract or not.
+   * ((~(1 << n) + 1) is equivalent to -2^n.
+   * So(( x>> 0x1f) & is_divided) & ((~(1 << n)) +1 ) subtract 2^n if x is 
+   * negative and not divided. So positive x does not affected by above term
+   * and it becomes desired result. 
+   */
   int divisor_mask = ~(~0 << n);
   int is_divided = (!!(x & divisor_mask) << 0x1f) >> 0x1f;
 
   return (x & divisor_mask) + (((x >> 0x1f) & is_divided) & ((~(1 << n)) + 1));
-  //return ((!!(x & divisor)) << 0x1f) >> 0x1f;
-  //return ~(1 << n);
 }
 
 /* 
@@ -281,17 +330,22 @@ int rempwr2(int x, int n) {
  *   Rating: 3
  */
 int isLess(int x, int y) {
-  // sign is same
+  /* 
+   * We can solve this problem dividing into two cases.
+   * First, sign of x and y is same.
+   * In this case, we perform subtraction(x - y = x + (~y + 1))
+   * and check it is negative. Above logic is 
+   * (!(sign_x ^ sign_y)) & !sign_xy. (sign is 1 if x is non-negative.)
+   * The other case, sign is different. In this case, if y is positive and
+   * x is negative is desired. So check sign_x and sign_y is different 
+   * using xor operation. and check sign_y is non-negative.
+   * This is equivalent to ((sign_x ^ sign_y) & sign_y) 
+   */
+  int sign_x = !(x >> 0x1f);
+  int sign_y = !(y >> 0x1f);
+  int sign_xy = !((x + (~y) + 1) >> 0x1f);
 
-  // sign is not same
-
-
-
-
-
-
-  return 2;
-
+  return ((!(sign_x ^ sign_y)) & !sign_xy) | ((sign_x ^ sign_y) & sign_y);
 }
 
 /* 
@@ -304,26 +358,15 @@ int isLess(int x, int y) {
  */
 int absVal(int x) {
   /*
-   * -Description of each terms
+   * Description of each terms
    * (x >> 0x1f) : 0x00000000 if x is non-negative, 
    * else 0xffffffff.
    * x ^ (x >> 0x1f) : if x is non-negative, result of this term is x.
    * Otherwise, x's bits are fliped.
-   * (x >> 0x1f) & 0x01 : if x is non-negative result is 0[0x00000000],
-   * else result is 1.
-   * - Description of functions
-   * It returns absolute value of x.
-   * If x is non-negative it returns x itself.
-   * Since most significant bit of non-negative value is 0 so (x >> 0x1f) is 0,
-   * So xor opertaions just return x, and and operation with MSB and 1 is 0 
-   * -> return value is just x.
-   * On the other hand, if x is negative it returns 2's complement of x,
-   * and it is equivalent to bitwise flip of x and plus 1.
-   * Sinxe x ^ (x >> 0x1f) is bitwise flop and (x >> 0x1f)& 0x01 is 1
-   * it returns 2's complement of x.
+   * (x >> 0x1f) & 0x01 : if x is non-
    */
-  return (x ^ (x >> 0x1f)) + ((x >> 0x1f) & 0x01) ;
 
+  return (x ^ (x >> 0x1f)) + ((x >> 0x1f) & 0x01) ;
 }
 
 /*
@@ -346,8 +389,8 @@ int isPower2(int x) {
    * so it returns and(&) operations of above three terms
    * isPower2 is true only x is non-zero and power of 2 and non-negative 
    */
-  return (!!x) & (!(x & (x + (~1) +1))) & (!(x >> 0x1f));
 
+  return (!!x) & (!(x & (x + (~1) +1))) & (!(x >> 0x1f));
 }
 
 /* 
